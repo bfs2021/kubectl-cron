@@ -36,6 +36,15 @@ kubectl cron inspect ledger -n finance
 # Retained executions plus explicitly unknown past slots
 kubectl cron runs ledger -n finance --since=24h --limit=50
 
+# Newest retained execution; previous Job; newest terminal failure
+kubectl cron logs ledger -n finance
+kubectl cron logs ledger -n finance --run-offset=1
+kubectl cron logs ledger -n finance --failed -c worker
+
+# Follow the newest active Job or read all retained Jobs
+kubectl cron logs ledger -n finance -f
+kubectl cron logs ledger -n finance --all --all-containers
+
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
 
@@ -88,6 +97,10 @@ Color supports `-c/--color=auto|always|never`; auto mode respects terminal detec
 Scheduling delay measures Job creation minus its recorded nominal slot. Duration measures Job-controller time, including scheduling and Pod startup, rather than container runtime. A failed retry Pod does not make its Job failed. Missing permissions and unavailable reads remain explicit; Events are temporary evidence and can expire.
 
 `runs NAME` combines retained owned Jobs with a bounded projection of the current schedule over `--since` (default 24h, maximum 8760h). `--limit` shows the newest entries (default 20, maximum 1000). A missing Job is `unknown`: the API cannot distinguish deleted, missed, or historically unscheduled slots. Previous schedule and suspension settings are unavailable. Relative schedules show observed Jobs without projecting an unrecorded past phase. Recorded slots determine ordering when present; manual Jobs and Jobs without a slot use creation time. No Events or Pods are read.
+
+`logs NAME` selects the newest retained owned Job by creation time, including manual Jobs. `--run=JOB` selects an exact owned Job; `--failed` filters terminal failures; `--all` reads all retained Jobs. All retained owned Pods of selected Jobs are considered, including retries. Container choice follows the default-container annotation, then the first regular container; `-c` and `--all-containers` select others. As in [kubectl logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/), `--previous` selects the previous container instance in the same Pod. Use `--run-offset=1` for the previous Job.
+
+Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--timestamps` as needed. Multiple streams receive identity prefixes. `--max-log-requests` bounds concurrency (default 5, maximum 20); follow rejects selections exceeding that bound. Follow attaches to currently retained Pods of the selected Job and ends when those streams end; it does not wait for future Pods or Jobs. Ctrl-C cancels all reads. A missing Pod or log is reported without inventing its deletion cause. Individual lines larger than 1 MiB fail explicitly. Logs use plain text rather than the Report formats.
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 

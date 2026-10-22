@@ -29,6 +29,7 @@ type evidenceFixture struct {
 	Events  []corev1.Event
 	mu      sync.Mutex
 	Paths   []string
+	Handle  func(http.ResponseWriter, *http.Request) bool
 }
 
 func timeMeta(t time.Time) *metav1.Time { v := metav1.NewTime(t); return &v }
@@ -78,6 +79,9 @@ func serveEvidence(t *testing.T, f *evidenceFixture, deny string) string {
 		if deny != "" && strings.HasSuffix(r.URL.Path, "/"+deny) {
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, `{"apiVersion":"v1","kind":"Status","status":"Failure","reason":"Forbidden","message":"evidence access denied","code":403}`)
+			return
+		}
+		if f.Handle != nil && f.Handle(w, r) {
 			return
 		}
 		var data any

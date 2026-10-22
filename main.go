@@ -4,11 +4,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/mertdotcc/kubectl-cron/internal/cli"
@@ -17,7 +20,12 @@ import (
 var version string
 
 func main() {
-	err := cli.New(os.Stdin, os.Stdout, os.Stderr, time.Now, buildVersion()).Execute()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	err := cli.New(os.Stdin, os.Stdout, os.Stderr, time.Now, buildVersion()).ExecuteContext(ctx)
+	if errors.Is(err, context.Canceled) {
+		return
+	}
 	if err != nil && !errors.Is(err, cli.ErrFindings) {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	}
