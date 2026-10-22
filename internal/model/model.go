@@ -91,6 +91,7 @@ type Report struct {
 	History     *History      `json:"history,omitempty"`
 	Diagnostics *[]Diagnostic `json:"diagnostics,omitempty"`
 	Calendar    *Calendar     `json:"calendar,omitempty"`
+	Watch       *WatchState   `json:"watch,omitempty"`
 }
 
 func (r Report) Rows() []CronJob {

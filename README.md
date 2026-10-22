@@ -56,6 +56,10 @@ kubectl cron timeline ledger -n finance --since=24h
 kubectl cron calendar -A --next=2h
 kubectl cron calendar -f schedules.yaml --next=24h -o json
 
+# Live Overview with a cached countdown; JSON emits one snapshot per line
+kubectl cron -A --watch
+kubectl cron ledger -n finance --watch -o json
+
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
 
@@ -119,6 +123,8 @@ Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--times
 
 `calendar [NAME]` groups occurrences strictly after the evaluation time through `--next` (default 2h, maximum 8760h). It reads CronJobs only and also supports offline files. `COUNT` is the number of selected CronJobs sharing that nominal instant, across timezone boundaries; it does not predict actual simultaneous starts. Suspended objects and unavailable calculations are listed separately. `--limit` bounds distinct displayed times (default 200, maximum 1000), keeping every member of a displayed group. Wide output adds expressions, timezone provenance, and local times. The `coincident-schedules` Finding summarizes shared displayed slots without prescribing a change.
 
+`--watch` / `-w` keeps the Overview live with a CronJob list/watch connection. Countdown refreshes use cached objects, with no repeated API reads per tick. `--watch-interval` controls display refresh (default 1s, range 250ms-1m). A terminal redraws; piped text appends timestamped frames, JSON emits compact JSON Lines, and YAML emits separate documents. Every structured frame includes connection state. Reconnection uses client-go's backoff and resource-version handling, including a fresh list after an expired version. Cached data remains visible while reconnecting and is labeled accordingly; connection state does not prove complete history. Access errors and output failures stop the command. Ctrl-C cancels it. A named watch can observe later creation of an absent CronJob. `--exit-on-findings` stops after the first snapshot with Findings, using exit 2. File input stays offline and cannot be watched.
+
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 
 Exit 0 means inspection completed, including when invalid configuration was reported. Exit 1 means an argument, file, API, or output error. `--exit-on-findings` enables exit 2 when Findings exist; an operational error still wins. Summary-only still evaluates Findings for this explicit exit-code check.
@@ -129,7 +135,7 @@ Exit 0 means inspection completed, including when invalid configuration was repo
 - An omitted timezone belongs to the controller manager and is not discoverable from a CronJob. It stays unknown unless explicitly assumed. A client timezone-resolution failure does not prove a controller failure.
 - Relative `@every` schedules use the last recorded schedule or creation time as their reference point; an offline expression uses the displayed evaluation time. They are nominal previews, not controller catch-up predictions. Missing reference data stays unavailable.
 - The parser has a bounded search horizon. No returned date is reported as “no occurrence found,” rather than proof that a schedule can never match.
-- Status fields do not reveal complete execution history. v0.1 reports no retained-run ratios, failure streaks, skipped-run totals, or suspension duration.
+- Status fields and retained resources do not reveal complete execution history. Reports make no complete-run ratios, failure-streak claims, skipped-run totals, or historical suspension durations.
 - The compatibility target is Kubernetes 1.35-1.37. Older `batch/v1` clusters are best effort without a version gate. Automated verification uses saved API data and scheduling cases; use the [local demo](hack/demo-cluster/README.md) for live validation.
 
 ## Development

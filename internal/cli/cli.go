@@ -49,6 +49,8 @@ type options struct {
 	count                                                      int
 	stdin                                                      io.Reader
 	now                                                        func() time.Time
+	watch                                                      bool
+	watchInterval                                              time.Duration
 }
 
 func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version string) *cobra.Command {
@@ -71,6 +73,8 @@ func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version stri
 	root.Flags().StringVar(&o.sort, "sort", "name", "Order rows: name|next|last|findings")
 	root.Flags().StringVar(&o.summary, "summary", "show", "Factual Summary: show|only|hide")
 	root.Flags().BoolVar(&o.problems, "problems", false, "Show only CronJobs with Findings (not a health verdict)")
+	root.Flags().BoolVarP(&o.watch, "watch", "w", false, "Watch live CronJobs and refresh the countdown from cached objects")
+	root.Flags().DurationVar(&o.watchInterval, "watch-interval", time.Second, "Display refresh interval, 250ms-1m; does not poll the API")
 	explain := &cobra.Command{
 		Use: "explain [EXPRESSION]", Short: "Explain a schedule or CronJob files without a cluster",
 		Example: "  kubectl cron explain '15 6 * * 1-5' --tz Europe/Berlin\n  kubectl cron explain -f schedules.yaml --assume-timezone=UTC",
@@ -182,6 +186,12 @@ func (o *options) validate(cmd *cobra.Command, args []string, explain bool) erro
 func (o *options) run(cmd *cobra.Command, args []string, explain bool) error {
 	if err := o.validate(cmd, args, explain); err != nil {
 		return err
+	}
+	if !explain && o.watch {
+		return o.runWatch(cmd, args)
+	}
+	if !explain && cmd.Flags().Changed("watch-interval") {
+		return fmt.Errorf("--watch-interval requires --watch")
 	}
 	var report model.Report
 	if explain && len(o.filenames) == 0 {
