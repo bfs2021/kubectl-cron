@@ -85,6 +85,7 @@ func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version stri
 	addHistory(root, o)
 	addLogs(root, o)
 	addDiagnostics(root, o)
+	addTimeline(root, o)
 	root.CompletionOptions.DisableDefaultCmd = true
 	root.SetUsageTemplate(strings.NewReplacer("{{.UseLine}}", "kubectl {{.UseLine}}", "{{.CommandPath}}", "kubectl {{.CommandPath}}").Replace(root.UsageTemplate()))
 	root.SetHelpTemplate(strings.ReplaceAll(root.HelpTemplate(), "{{.CommandPath}}", "kubectl {{.CommandPath}}"))

@@ -36,8 +36,8 @@ func addHistory(root *cobra.Command, parent *options) {
 }
 
 func historyFlags(cmd *cobra.Command, since *time.Duration, limit *int) {
-	cmd.Flags().DurationVar(since, "since", 24*time.Hour, "History window, greater than zero and at most 8760h")
-	cmd.Flags().IntVar(limit, "limit", 20, "Maximum history entries to display, 1-1000")
+	cmd.Flags().DurationVar(since, "since", *since, "History window, greater than zero and at most 8760h")
+	cmd.Flags().IntVar(limit, "limit", *limit, "Maximum history entries to display, 1-1000")
 }
 func validateHistory(since time.Duration, limit int) error {
 	if since <= 0 || since > 365*24*time.Hour {

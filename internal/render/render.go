@@ -29,6 +29,9 @@ func Human(out, notes io.Writer, report model.Report, opts Options) error {
 		return diagnostics(out, notes, *report.Diagnostics, opts)
 	}
 	if report.History != nil {
+		if report.Kind == "CronJobTimeline" {
+			return timeline(out, notes, *report.History, opts)
+		}
 		return history(out, notes, *report.History, opts)
 	}
 	if report.Inspection != nil {
