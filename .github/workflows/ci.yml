@@ -22,7 +22,4 @@ jobs:
           test -z "$(gofmt -l .)"
           go mod tidy
           git diff --exit-code -- go.mod go.sum
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          version: '~> v2'
-          args: release --snapshot --clean
+      - run: go build ./...

@@ -16,9 +16,7 @@ go build -o kubectl-cron .
 
 Place `kubectl-cron` on your `PATH`, then check `kubectl plugin list`. It runs as `kubectl cron`; the binary also works directly.
 
-GoReleaser and Krew metadata are prepared for tagged releases. The plugin has not yet been submitted to the Krew index. After releases are published, binaries will be available on the repository's Releases page and through `go install github.com/mertdotcc/kubectl-cron@latest`.
-
-Krew can upgrade a binary only when Krew installed it; remove a separately installed binary before switching installation methods.
+Development currently uses local builds. Release publishing and Krew submission are suspended, and this repository has no publishing automation.
 
 ## Use
 
