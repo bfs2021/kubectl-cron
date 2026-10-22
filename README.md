@@ -33,6 +33,9 @@ kubectl cron ledger -n finance
 # Related Jobs and Events, explicitly requested
 kubectl cron inspect ledger -n finance
 
+# Retained executions plus explicitly unknown past slots
+kubectl cron runs ledger -n finance --since=24h --limit=50
+
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
 
@@ -83,6 +86,8 @@ Color supports `-c/--color=auto|always|never`; auto mode respects terminal detec
 `inspect NAME` shows effective configuration, retained owned Jobs, and UID-scoped CronJob Events. It matches controller owner UIDs, so a reused name cannot attach Jobs from a deleted CronJob. Owned manual Jobs are included regardless of their names. `--limit` bounds displayed Jobs; the retained count is a sample, not complete history. This command requires live resources and rejects `-f`.
 
 Scheduling delay measures Job creation minus its recorded nominal slot. Duration measures Job-controller time, including scheduling and Pod startup, rather than container runtime. A failed retry Pod does not make its Job failed. Missing permissions and unavailable reads remain explicit; Events are temporary evidence and can expire.
+
+`runs NAME` combines retained owned Jobs with a bounded projection of the current schedule over `--since` (default 24h, maximum 8760h). `--limit` shows the newest entries (default 20, maximum 1000). A missing Job is `unknown`: the API cannot distinguish deleted, missed, or historically unscheduled slots. Previous schedule and suspension settings are unavailable. Relative schedules show observed Jobs without projecting an unrecorded past phase. Recorded slots determine ordering when present; manual Jobs and Jobs without a slot use creation time. No Events or Pods are read.
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 

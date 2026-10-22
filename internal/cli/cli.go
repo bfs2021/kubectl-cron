@@ -82,6 +82,7 @@ func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version stri
 	explain.Flags().IntVar(&o.count, "count", 5, "Number of upcoming occurrences, 1-1000")
 	root.AddCommand(explain)
 	addInspection(root, o)
+	addHistory(root, o)
 	root.CompletionOptions.DisableDefaultCmd = true
 	root.SetUsageTemplate(strings.NewReplacer("{{.UseLine}}", "kubectl {{.UseLine}}", "{{.CommandPath}}", "kubectl {{.CommandPath}}").Replace(root.UsageTemplate()))
 	root.SetHelpTemplate(strings.ReplaceAll(root.HelpTemplate(), "{{.CommandPath}}", "kubectl {{.CommandPath}}"))

@@ -88,6 +88,7 @@ type Report struct {
 	Summary     *Summary     `json:"summary,omitempty"`
 	Explanation *Explanation `json:"explanation,omitempty"`
 	Inspection  *Inspection  `json:"inspection,omitempty"`
+	History     *History     `json:"history,omitempty"`
 }
 
 func (r Report) Rows() []CronJob {
@@ -98,6 +99,9 @@ func (r Report) Rows() []CronJob {
 }
 
 func (r Report) HasFindings() bool {
+	if r.History != nil && len(r.History.CronJob.Findings) > 0 {
+		return true
+	}
 	if r.Inspection != nil && len(r.Inspection.CronJob.Findings) > 0 {
 		return true
 	}
