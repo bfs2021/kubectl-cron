@@ -1,0 +1,36 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: cron
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/mertdotcc/kubectl-cron
+  shortDescription: Inspect CronJob schedules and recorded state
+  description: |
+    Shows upcoming nominal schedule occurrences, recorded scheduling and success
+    times, active Job references, and configuration Findings. Schedule
+    Explanations and file-based inspection also work without a cluster.
+
+    Reads CronJobs only. It never creates Jobs or changes cluster resources.
+    Unspecified controller timezones stay unknown unless explicitly assumed.
+  platforms:
+  - selector:
+      matchLabels: {os: darwin, arch: amd64}
+    {{addURIAndSha "https://github.com/mertdotcc/kubectl-cron/releases/download/{{ .TagName }}/kubectl-cron_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+    bin: kubectl-cron
+  - selector:
+      matchLabels: {os: darwin, arch: arm64}
+    {{addURIAndSha "https://github.com/mertdotcc/kubectl-cron/releases/download/{{ .TagName }}/kubectl-cron_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+    bin: kubectl-cron
+  - selector:
+      matchLabels: {os: linux, arch: amd64}
+    {{addURIAndSha "https://github.com/mertdotcc/kubectl-cron/releases/download/{{ .TagName }}/kubectl-cron_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+    bin: kubectl-cron
+  - selector:
+      matchLabels: {os: linux, arch: arm64}
+    {{addURIAndSha "https://github.com/mertdotcc/kubectl-cron/releases/download/{{ .TagName }}/kubectl-cron_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+    bin: kubectl-cron
+  - selector:
+      matchLabels: {os: windows, arch: amd64}
+    {{addURIAndSha "https://github.com/mertdotcc/kubectl-cron/releases/download/{{ .TagName }}/kubectl-cron_{{ .TagName }}_windows_amd64.tar.gz" .TagName }}
+    bin: kubectl-cron.exe
