@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: minute-marker
+  namespace: cron-demo
+  labels: {demo: cron}
+spec:
+  schedule: "* * * * *"
+  timeZone: UTC
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: marker
+              image: busybox:1.37.0
+              command: [sh, -c, 'date -u; echo marker-complete']
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: parked-export
+  namespace: cron-demo
+  labels: {demo: cron}
+spec:
+  schedule: "30 5 * * MON-FRI"
+  timeZone: Europe/Berlin
+  suspend: true
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: export
+              image: busybox:1.37.0
+              command: [sh, -c, 'echo export-complete']

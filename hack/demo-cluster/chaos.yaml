@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: empty-calendar
+  namespace: cron-demo
+  labels: {demo: cron}
+spec:
+  schedule: "0 0 31 2 *"
+  timeZone: UTC
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: empty
+              image: busybox:1.37.0
+              command: [sh, -c, 'echo empty-calendar']
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: controller-local
+  namespace: cron-demo
+  labels: {demo: cron}
+spec:
+  schedule: "*/20 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: local
+              image: busybox:1.37.0
+              command: [sh, -c, 'date']
