@@ -14,4 +14,19 @@ Rules have stable kebab-case IDs. Findings identify a configuration or calculati
 
 `--problems` means rows with Findings, including uncertainty. It does not mean proven unhealthy. `--no-findings` removes Findings from every output format while retaining calculation reasons and timezone provenance. It cannot be combined with `--problems` or `--exit-on-findings`.
 
-Suspension suppresses the upcoming execution display, but does not hide invalid configuration. v0.1 collects no Jobs, Pods, or Events, and makes no inference about historical failure streaks, exact missed-run counts, replacement causes, or deleted evidence.
+Suspension suppresses the upcoming execution display, but does not hide invalid configuration. The Overview and `runs` use configuration checks. `inspect` and `diagnose` additionally evaluate retained runtime evidence:
+
+| Rule | Evidence | Meaning |
+| --- | --- | --- |
+| `retained-job-failures` | Owned Jobs with terminal `Failed=True`. | Reports a retained failure sample, with the newest Job and terminal observation. Failed retry Pods alone do not trigger it. |
+| `concurrent-active-jobs` | More than one retained nonterminal owned Job reports active Pods. | Reports observed concurrency and current policy; manual Jobs are included. It does not assert runaway growth. |
+| `duration-exceeds-current-gap` | A recorded completed Job duration is at least the gap between the next two current-spec occurrences. | Gives a dated comparison, without asserting historical policy or permanently skipped executions. |
+| `external-job-controller` | An owned Job declares another `managedBy` controller. | Built-in Job status interpretation is unavailable. |
+| `failed-history-disabled` | Effective failed history limit is zero. | The setting requests no retained terminal failures; it does not explain any particular deletion. |
+| `successful-history-disabled` | Effective successful history limit is zero. | The setting requests no retained successes. |
+| `job-already-active-event` | A UID-scoped retained `JobAlreadyActive` Event. | Reports the controller observation, without assigning individual slots. |
+| `missed-schedule-event` | A UID-scoped retained `MissSchedule` Event. | Reports the Event's message and last observation, without inventing a slot count. |
+| `too-many-missed-times-event` | A UID-scoped retained `TooManyMissedTimes` Event. | Reports the warning; subsequent controller behavior remains unknown. |
+| `controller-warning-event` | Another UID-scoped Warning Event. | Reports its reason, message, and observation time. |
+
+Events can expire and retained Jobs can be removed by several mechanisms. Neither their absence nor current history settings establish an exact missed-run count, a failure streak, replacement causes, or historical suspension duration. A `SuccessfulDelete` Event does not establish replacement, even under current `Replace` policy. Unavailable reads appear separately from Findings so empty Findings never imply complete evidence or proven health.

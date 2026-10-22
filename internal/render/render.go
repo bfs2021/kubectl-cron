@@ -25,6 +25,9 @@ type Options struct {
 }
 
 func Human(out, notes io.Writer, report model.Report, opts Options) error {
+	if report.Diagnostics != nil {
+		return diagnostics(out, notes, *report.Diagnostics, opts)
+	}
 	if report.History != nil {
 		return history(out, notes, *report.History, opts)
 	}

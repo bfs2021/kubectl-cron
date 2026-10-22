@@ -45,6 +45,10 @@ kubectl cron logs ledger -n finance --failed -c worker
 kubectl cron logs ledger -n finance -f
 kubectl cron logs ledger -n finance --all --all-containers
 
+# Findings from retained Jobs and UID-scoped Events
+kubectl cron diagnose -A
+kubectl cron diagnose ledger -n finance --exit-on-findings -o json
+
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
 
@@ -101,6 +105,8 @@ Scheduling delay measures Job creation minus its recorded nominal slot. Duration
 `logs NAME` selects the newest retained owned Job by creation time, including manual Jobs. `--run=JOB` selects an exact owned Job; `--failed` filters terminal failures; `--all` reads all retained Jobs. All retained owned Pods of selected Jobs are considered, including retries. Container choice follows the default-container annotation, then the first regular container; `-c` and `--all-containers` select others. As in [kubectl logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/), `--previous` selects the previous container instance in the same Pod. Use `--run-offset=1` for the previous Job.
 
 Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--timestamps` as needed. Multiple streams receive identity prefixes. `--max-log-requests` bounds concurrency (default 5, maximum 20); follow rejects selections exceeding that bound. Follow attaches to currently retained Pods of the selected Job and ends when those streams end; it does not wait for future Pods or Jobs. Ctrl-C cancels all reads. A missing Pod or log is reported without inventing its deletion cause. Individual lines larger than 1 MiB fail explicitly. Logs use plain text rather than the Report formats.
+
+`diagnose [NAME]` prints Findings from configuration, retained Job conditions and timings, and UID-scoped controller Events. It reads Jobs once per selected namespace and bounds related requests to four at a time. It makes no blanket health verdict or inferred failure streak. Unavailable reads and retention limits remain visible even when there are no Findings. `diagnose -f` stays offline and checks configuration only. Detailed inspection uses the same runtime rules; see the [rule reference](docs/rules.md).
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 

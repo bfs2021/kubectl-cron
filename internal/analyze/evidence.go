@@ -121,6 +121,7 @@ func Inspection(e collect.Evidence, now time.Time, opts Options, limit int) mode
 	base := Overview([]batchv1.CronJob{e.CronJob}, "cluster", now, opts)
 	runs := Runs(e.Jobs)
 	view := model.Inspection{CronJob: base.Rows()[0], Runs: runs, Events: []model.Event{}, Evidence: e.Availability}
+	view.CronJob.Findings = Diagnose(e, now, opts).Findings
 	for _, source := range e.Availability {
 		if source.Resource == "jobs" && source.State == "available" {
 			total := len(runs)
@@ -131,7 +132,13 @@ func Inspection(e collect.Evidence, now time.Time, opts Options, limit int) mode
 		view.Runs = runs[:limit]
 		view.RunsTruncated = true
 	}
-	for _, event := range e.Events {
+	view.Events = Events(e.Events)
+	return model.Report{APIVersion: model.APIVersion, Kind: "CronJobInspection", GeneratedAt: now.UTC(), Source: "cluster", Inspection: &view}
+}
+
+func Events(events []corev1.Event) []model.Event {
+	result := []model.Event{}
+	for _, event := range events {
 		at := recordMeta(&event.LastTimestamp)
 		observations := event.Count
 		if !event.EventTime.IsZero() && (at.Time == nil || event.EventTime.After(*at.Time)) {
@@ -151,13 +158,13 @@ func Inspection(e collect.Evidence, now time.Time, opts Options, limit int) mode
 		if at.Time == nil {
 			at = recordMeta(&event.CreationTimestamp)
 		}
-		view.Events = append(view.Events, model.Event{Name: event.Name, Type: event.Type, Reason: event.Reason, Message: event.Message, Observations: observations, ObservedAt: at})
+		result = append(result, model.Event{Name: event.Name, Type: event.Type, Reason: event.Reason, Message: event.Message, Observations: observations, ObservedAt: at})
 	}
-	sort.SliceStable(view.Events, func(i, j int) bool {
-		if c := compareTimes(view.Events[i].ObservedAt.Time, view.Events[j].ObservedAt.Time, true); c != 0 {
+	sort.SliceStable(result, func(i, j int) bool {
+		if c := compareTimes(result[i].ObservedAt.Time, result[j].ObservedAt.Time, true); c != 0 {
 			return c < 0
 		}
-		return view.Events[i].Name < view.Events[j].Name
+		return result[i].Name < result[j].Name
 	})
-	return model.Report{APIVersion: model.APIVersion, Kind: "CronJobInspection", GeneratedAt: now.UTC(), Source: "cluster", Inspection: &view}
+	return result
 }

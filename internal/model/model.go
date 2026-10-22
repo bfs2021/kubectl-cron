@@ -84,11 +84,12 @@ type Report struct {
 	GeneratedAt time.Time `json:"generatedAt"`
 	Source      string    `json:"source"`
 	// A pointer distinguishes an empty selection from Summary-only projection.
-	CronJobs    *[]CronJob   `json:"cronJobs,omitempty"`
-	Summary     *Summary     `json:"summary,omitempty"`
-	Explanation *Explanation `json:"explanation,omitempty"`
-	Inspection  *Inspection  `json:"inspection,omitempty"`
-	History     *History     `json:"history,omitempty"`
+	CronJobs    *[]CronJob    `json:"cronJobs,omitempty"`
+	Summary     *Summary      `json:"summary,omitempty"`
+	Explanation *Explanation  `json:"explanation,omitempty"`
+	Inspection  *Inspection   `json:"inspection,omitempty"`
+	History     *History      `json:"history,omitempty"`
+	Diagnostics *[]Diagnostic `json:"diagnostics,omitempty"`
 }
 
 func (r Report) Rows() []CronJob {
@@ -99,6 +100,13 @@ func (r Report) Rows() []CronJob {
 }
 
 func (r Report) HasFindings() bool {
+	if r.Diagnostics != nil {
+		for _, row := range *r.Diagnostics {
+			if len(row.Findings) > 0 {
+				return true
+			}
+		}
+	}
 	if r.History != nil && len(r.History.CronJob.Findings) > 0 {
 		return true
 	}
