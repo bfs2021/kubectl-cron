@@ -52,6 +52,10 @@ kubectl cron diagnose ledger -n finance --exit-on-findings -o json
 # Compact execution history; '?' means unknown, not proven skipped
 kubectl cron timeline ledger -n finance --since=24h
 
+# Upcoming nominal slots and counts of selected CronJobs sharing them
+kubectl cron calendar -A --next=2h
+kubectl cron calendar -f schedules.yaml --next=24h -o json
+
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
 
@@ -112,6 +116,8 @@ Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--times
 `diagnose [NAME]` prints Findings from configuration, retained Job conditions and timings, and UID-scoped controller Events. It reads Jobs once per selected namespace and bounds related requests to four at a time. It makes no blanket health verdict or inferred failure streak. Unavailable reads and retention limits remain visible even when there are no Findings. `diagnose -f` stays offline and checks configuration only. Detailed inspection uses the same runtime rules; see the [rule reference](docs/rules.md).
 
 `timeline NAME` draws the same evidence as `runs`, oldest to newest, with one symbol per displayed entry. Spacing is entry order rather than proportional elapsed time. The legend separates complete, failed, running, terminating, pending, suspended, external-controller, and unknown states. Counts cover displayed entries only. It shares the history window and truncation rules, with a default display limit of 200; JSON/YAML retain the full history model for those entries.
+
+`calendar [NAME]` groups occurrences strictly after the evaluation time through `--next` (default 2h, maximum 8760h). It reads CronJobs only and also supports offline files. `COUNT` is the number of selected CronJobs sharing that nominal instant, across timezone boundaries; it does not predict actual simultaneous starts. Suspended objects and unavailable calculations are listed separately. `--limit` bounds distinct displayed times (default 200, maximum 1000), keeping every member of a displayed group. Wide output adds expressions, timezone provenance, and local times. The `coincident-schedules` Finding summarizes shared displayed slots without prescribing a change.
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 

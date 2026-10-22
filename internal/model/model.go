@@ -90,6 +90,7 @@ type Report struct {
 	Inspection  *Inspection   `json:"inspection,omitempty"`
 	History     *History      `json:"history,omitempty"`
 	Diagnostics *[]Diagnostic `json:"diagnostics,omitempty"`
+	Calendar    *Calendar     `json:"calendar,omitempty"`
 }
 
 func (r Report) Rows() []CronJob {
@@ -100,6 +101,16 @@ func (r Report) Rows() []CronJob {
 }
 
 func (r Report) HasFindings() bool {
+	if r.Calendar != nil {
+		if len(r.Calendar.Findings) > 0 {
+			return true
+		}
+		for _, cj := range r.Calendar.CronJobs {
+			if len(cj.Findings) > 0 {
+				return true
+			}
+		}
+	}
 	if r.Diagnostics != nil {
 		for _, row := range *r.Diagnostics {
 			if len(row.Findings) > 0 {
