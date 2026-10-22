@@ -4,7 +4,7 @@ A **read-only** kubectl plugin for CronJob schedules, upcoming occurrences, and 
 
 ![Overview generated from the API fixtures](docs/overview.svg)
 
-The Overview reads CronJobs only. Schedule Explanations and file-based inspection work entirely offline. Findings are separate from facts and identify what deserves investigation without prescribing a fix.
+The Overview reads CronJobs only. Detailed inspection also reads owned Jobs and CronJob Events. Schedule Explanations and file-based inspection work entirely offline. Findings are separate from facts and identify what deserves investigation without prescribing a fix.
 
 ## Install
 
@@ -29,6 +29,9 @@ kubectl cron -A -o wide
 
 # One CronJob; the same Overview, narrowed to one object
 kubectl cron ledger -n finance
+
+# Related Jobs and Events, explicitly requested
+kubectl cron inspect ledger -n finance
 
 # Escape a CronJob name that matches a subcommand
 kubectl cron cronjob/explain -n finance
@@ -76,6 +79,10 @@ Wide output adds timezone provenance, effective concurrency policy, starting dea
 Color supports `-c/--color=auto|always|never`; auto mode respects terminal detection, `NO_COLOR`, and `TERM=dumb`. Notes about calculation marks go to stderr. JSON and YAML contain no terminal coloring.
 
 ## Reports and exit codes
+
+`inspect NAME` shows effective configuration, retained owned Jobs, and UID-scoped CronJob Events. It matches controller owner UIDs, so a reused name cannot attach Jobs from a deleted CronJob. Owned manual Jobs are included regardless of their names. `--limit` bounds displayed Jobs; the retained count is a sample, not complete history. This command requires live resources and rejects `-f`.
+
+Scheduling delay measures Job creation minus its recorded nominal slot. Duration measures Job-controller time, including scheduling and Pod startup, rather than container runtime. A failed retry Pod does not make its Job failed. Missing permissions and unavailable reads remain explicit; Events are temporary evidence and can expire.
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 

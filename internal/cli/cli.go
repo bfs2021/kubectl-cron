@@ -56,7 +56,7 @@ func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version stri
 	root := &cobra.Command{
 		Use:     "cron [NAME|cronjob/NAME]",
 		Short:   "Inspect CronJob schedules and recorded state (read-only)",
-		Long:    "Show CronJob scheduling facts, upcoming nominal occurrences, and configuration findings.\nThe plugin reads CronJobs only. It never creates, changes, or runs cluster resources.",
+		Long:    "Show CronJob scheduling facts, upcoming nominal occurrences, and configuration findings.\nThe default Overview reads CronJobs only. Richer commands read related evidence.\nThe plugin never creates, changes, or runs cluster resources.",
 		Example: "  kubectl cron\n  kubectl cron -A -o wide\n  kubectl cron cronjob/explain\n  kubectl cron -f schedules.yaml --assume-timezone=UTC\n  kubectl cron --summary=only",
 		Args:    cobra.MaximumNArgs(1), SilenceUsage: true, SilenceErrors: true, Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error { return o.run(cmd, args, false) },
@@ -81,8 +81,10 @@ func New(in io.Reader, out, errOut io.Writer, now func() time.Time, version stri
 	explain.Flags().StringVar(&o.tz, "tz", "UTC", "Timezone for a bare expression (default UTC)")
 	explain.Flags().IntVar(&o.count, "count", 5, "Number of upcoming occurrences, 1-1000")
 	root.AddCommand(explain)
+	addInspection(root, o)
 	root.CompletionOptions.DisableDefaultCmd = true
-	root.SetUsageTemplate(strings.ReplaceAll(root.UsageTemplate(), "{{.UseLine}}", "kubectl {{.UseLine}}"))
+	root.SetUsageTemplate(strings.NewReplacer("{{.UseLine}}", "kubectl {{.UseLine}}", "{{.CommandPath}}", "kubectl {{.CommandPath}}").Replace(root.UsageTemplate()))
+	root.SetHelpTemplate(strings.ReplaceAll(root.HelpTemplate(), "{{.CommandPath}}", "kubectl {{.CommandPath}}"))
 	return root
 }
 

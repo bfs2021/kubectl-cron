@@ -87,6 +87,7 @@ type Report struct {
 	CronJobs    *[]CronJob   `json:"cronJobs,omitempty"`
 	Summary     *Summary     `json:"summary,omitempty"`
 	Explanation *Explanation `json:"explanation,omitempty"`
+	Inspection  *Inspection  `json:"inspection,omitempty"`
 }
 
 func (r Report) Rows() []CronJob {
@@ -97,6 +98,9 @@ func (r Report) Rows() []CronJob {
 }
 
 func (r Report) HasFindings() bool {
+	if r.Inspection != nil && len(r.Inspection.CronJob.Findings) > 0 {
+		return true
+	}
 	if r.Explanation != nil && len(r.Explanation.Findings) > 0 {
 		return true
 	}

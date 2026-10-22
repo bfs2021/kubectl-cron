@@ -25,6 +25,9 @@ type Options struct {
 }
 
 func Human(out, notes io.Writer, report model.Report, opts Options) error {
+	if report.Inspection != nil {
+		return inspection(out, notes, *report.Inspection, report.GeneratedAt, opts)
+	}
 	if report.Explanation != nil {
 		return explanation(out, notes, "", report.Explanation.Schedule, report.Explanation.Findings, report.GeneratedAt, opts)
 	}

@@ -44,6 +44,22 @@ _Avoid_: Findings, health report
 An offline interpretation of a Schedule, including its upcoming occurrences.
 _Avoid_: Inspection, forecast
 
+**Inspection**:
+A detailed view of one CronJob and the retained evidence about its executions.
+_Avoid_: Overview, health verdict
+
+**Run**:
+An observed execution represented by a Job controlled by the current CronJob, including an owned manual execution.
+_Avoid_: Occurrence, expected slot
+
+**Scheduling delay**:
+The signed difference between a Job's recorded nominal Occurrence and its creation time.
+_Avoid_: Container startup delay
+
+**Observed duration**:
+The elapsed time between the Job controller's recorded start and terminal observation.
+_Avoid_: Container runtime
+
 **Finding**:
 An observation produced by a Rule about a CronJob's configuration or reported state. It identifies something to investigate without prescribing an action.
 _Avoid_: Warning, fix, recommendation
@@ -53,5 +69,5 @@ A named condition that produces a Finding. Its identity remains stable when the 
 _Avoid_: Linter, policy
 
 **Report**:
-A machine-readable rendering of an Overview or Explanation.
+A machine-readable rendering of a view or Explanation.
 _Avoid_: Dump, summary
