@@ -1,0 +1,148 @@
+{
+  "apiVersion": "cron.kubectl.dev/v1alpha1",
+  "kind": "CronJobReport",
+  "generatedAt": "2026-11-05T08:12:00Z",
+  "source": "file",
+  "cronJobs": [
+    {
+      "namespace": "finance",
+      "name": "ledger",
+      "schedule": {
+        "expression": "7 * * * *",
+        "description": "at minute 7 past every hour",
+        "timezone": {
+          "name": "UTC",
+          "source": "spec"
+        },
+        "next": {
+          "time": "2026-11-05T09:07:00Z"
+        },
+        "occurrences": [
+          "2026-11-05T09:07:00Z"
+        ]
+      },
+      "lastSchedule": {
+        "time": "2026-11-05T08:07:00Z"
+      },
+      "lastSuccess": {
+        "time": "2026-11-05T08:08:30Z"
+      },
+      "activeReferences": 1,
+      "suspended": false,
+      "concurrency": "Forbid",
+      "startingDeadlineSeconds": 90,
+      "successfulHistoryLimit": 3,
+      "failedHistoryLimit": 1
+    },
+    {
+      "namespace": "maintenance",
+      "name": "invalid-window",
+      "schedule": {
+        "expression": "0 0 31 2 *",
+        "description": "at 00:00, day 31 of the month, in February",
+        "timezone": {
+          "name": "UTC",
+          "source": "spec"
+        },
+        "next": {
+          "time": null,
+          "reason": "no-next-occurrence"
+        }
+      },
+      "lastSchedule": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "lastSuccess": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "activeReferences": 0,
+      "suspended": false,
+      "concurrency": "Allow",
+      "startingDeadlineSeconds": null,
+      "successfulHistoryLimit": 3,
+      "failedHistoryLimit": 1,
+      "findings": [
+        {
+          "rule": "no-next-occurrence",
+          "message": "The parser found no upcoming occurrence within its bounded search horizon."
+        }
+      ]
+    },
+    {
+      "namespace": "maintenance",
+      "name": "prune",
+      "schedule": {
+        "expression": "0 4 * * SUN",
+        "description": "at 04:00, Sunday",
+        "timezone": {
+          "name": "Europe/Berlin",
+          "source": "spec"
+        },
+        "next": {
+          "time": null,
+          "reason": "suspended"
+        }
+      },
+      "lastSchedule": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "lastSuccess": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "activeReferences": 0,
+      "suspended": true,
+      "concurrency": "Allow",
+      "startingDeadlineSeconds": null,
+      "successfulHistoryLimit": 2,
+      "failedHistoryLimit": 0
+    },
+    {
+      "namespace": "telemetry",
+      "name": "pulse",
+      "schedule": {
+        "expression": "*/10 * * * *",
+        "description": "every 10 minutes",
+        "timezone": {
+          "name": null,
+          "source": "controller-unknown"
+        },
+        "next": {
+          "time": null,
+          "reason": "controller-timezone-unknown"
+        }
+      },
+      "lastSchedule": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "lastSuccess": {
+        "time": null,
+        "reason": "not-recorded"
+      },
+      "activeReferences": 0,
+      "suspended": false,
+      "concurrency": "Allow",
+      "startingDeadlineSeconds": null,
+      "successfulHistoryLimit": 3,
+      "failedHistoryLimit": 1,
+      "findings": [
+        {
+          "rule": "timezone-not-set",
+          "message": "The CronJob does not declare its controller's timezone; upcoming occurrences are unknown."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "suspended": 1,
+    "withActiveReferences": 1,
+    "timezoneConfigured": 3,
+    "timezoneUnspecified": 1,
+    "timezoneAssumed": 0
+  }
+}

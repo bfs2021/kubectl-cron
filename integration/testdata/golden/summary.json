@@ -1,0 +1,14 @@
+{
+  "apiVersion": "cron.kubectl.dev/v1alpha1",
+  "kind": "CronJobReport",
+  "generatedAt": "2026-11-05T08:12:00Z",
+  "source": "file",
+  "summary": {
+    "total": 4,
+    "suspended": 1,
+    "withActiveReferences": 1,
+    "timezoneConfigured": 3,
+    "timezoneUnspecified": 1,
+    "timezoneAssumed": 0
+  }
+}

@@ -1,0 +1,7 @@
+0 6 * * MON-FRI  →  at 06:00, Monday through Friday
+Timezone: Europe/Berlin (argument)
+
+Next 3 occurrences:
+  Fri 2026-11-06 06:00:00 +01:00  (in 20h48m)
+  Mon 2026-11-09 06:00:00 +01:00  (in 3d20h)
+  Tue 2026-11-10 06:00:00 +01:00  (in 4d20h)

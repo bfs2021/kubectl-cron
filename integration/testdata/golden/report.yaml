@@ -1,0 +1,110 @@
+apiVersion: cron.kubectl.dev/v1alpha1
+cronJobs:
+- activeReferences: 1
+  concurrency: Forbid
+  failedHistoryLimit: 1
+  lastSchedule:
+    time: "2026-11-05T08:07:00Z"
+  lastSuccess:
+    time: "2026-11-05T08:08:30Z"
+  name: ledger
+  namespace: finance
+  schedule:
+    description: at minute 7 past every hour
+    expression: 7 * * * *
+    next:
+      time: "2026-11-05T09:07:00Z"
+    occurrences:
+    - "2026-11-05T09:07:00Z"
+    timezone:
+      name: UTC
+      source: spec
+  startingDeadlineSeconds: 90
+  successfulHistoryLimit: 3
+  suspended: false
+- activeReferences: 0
+  concurrency: Allow
+  failedHistoryLimit: 1
+  findings:
+  - message: The parser found no upcoming occurrence within its bounded search horizon.
+    rule: no-next-occurrence
+  lastSchedule:
+    reason: not-recorded
+    time: null
+  lastSuccess:
+    reason: not-recorded
+    time: null
+  name: invalid-window
+  namespace: maintenance
+  schedule:
+    description: at 00:00, day 31 of the month, in February
+    expression: 0 0 31 2 *
+    next:
+      reason: no-next-occurrence
+      time: null
+    timezone:
+      name: UTC
+      source: spec
+  startingDeadlineSeconds: null
+  successfulHistoryLimit: 3
+  suspended: false
+- activeReferences: 0
+  concurrency: Allow
+  failedHistoryLimit: 0
+  lastSchedule:
+    reason: not-recorded
+    time: null
+  lastSuccess:
+    reason: not-recorded
+    time: null
+  name: prune
+  namespace: maintenance
+  schedule:
+    description: at 04:00, Sunday
+    expression: 0 4 * * SUN
+    next:
+      reason: suspended
+      time: null
+    timezone:
+      name: Europe/Berlin
+      source: spec
+  startingDeadlineSeconds: null
+  successfulHistoryLimit: 2
+  suspended: true
+- activeReferences: 0
+  concurrency: Allow
+  failedHistoryLimit: 1
+  findings:
+  - message: The CronJob does not declare its controller's timezone; upcoming occurrences
+      are unknown.
+    rule: timezone-not-set
+  lastSchedule:
+    reason: not-recorded
+    time: null
+  lastSuccess:
+    reason: not-recorded
+    time: null
+  name: pulse
+  namespace: telemetry
+  schedule:
+    description: every 10 minutes
+    expression: '*/10 * * * *'
+    next:
+      reason: controller-timezone-unknown
+      time: null
+    timezone:
+      name: null
+      source: controller-unknown
+  startingDeadlineSeconds: null
+  successfulHistoryLimit: 3
+  suspended: false
+generatedAt: "2026-11-05T08:12:00Z"
+kind: CronJobReport
+source: file
+summary:
+  suspended: 1
+  timezoneAssumed: 0
+  timezoneConfigured: 3
+  timezoneUnspecified: 1
+  total: 4
+  withActiveReferences: 1

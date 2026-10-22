@@ -1,0 +1,15 @@
+NAMESPACE    NAME            SCHEDULE      NEXT       LAST SCHEDULE  LAST SUCCESS  ACTIVE  SUSPEND  FINDINGS  TIMEZONE                    CONCURRENCY  DEADLINE  HISTORY  DESCRIPTION
+finance      ledger          7 * * * *     in 55m     5m ago         3m30s ago     1       false    0         UTC                         Forbid       90s       3/1      at minute 7 past every hour
+maintenance  invalid-window  0 0 31 2 *    ?          —              —             0       false    1         UTC                         Allow        —         3/1      at 00:00, day 31 of the month, in February
+maintenance  prune           0 4 * * SUN   SUSPENDED  —              —             0       true     0         Europe/Berlin               Allow        —         2/0      at 04:00, Sunday
+telemetry    pulse           */10 * * * *  ?          —              —             0       false    1         controller-local (unknown)  Allow        —         3/1      every 10 minutes
+
+Summary
+  CronJobs: 4; suspended: 1; with active Job references: 1
+  Timezone configured: 3; unspecified: 1; explicitly assumed: 0
+
+Findings — maintenance/invalid-window
+  no-next-occurrence  The parser found no upcoming occurrence within its bounded search horizon.
+
+Findings — telemetry/pulse
+  timezone-not-set  The CronJob does not declare its controller's timezone; upcoming occurrences are unknown.
