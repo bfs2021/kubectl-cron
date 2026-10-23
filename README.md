@@ -154,7 +154,7 @@ Read the [glossary](GLOSSARY.md), [v0.1 design](docs/v0.1-design.md), and [ADRs]
 
 ## Related tools
 
-Use kube-state-metrics for monitoring and alerting infrastructure. Use `kubectl create job --from=cronjob/NAME` or `exec-cronjob` to trigger work. This plugin provides terminal inspection without additional cluster components.
+Use kube-state-metrics for monitoring and alerting infrastructure. Use `kubectl create job --from=cronjob/NAME` or `exec-cronjob` to trigger work. Each Job created with `kubectl create job --from` causes an `UnexpectedJob` controller Warning, which `inspect` and `diagnose` report as a `controller-warning-event` Finding until the Event expires; see the [rule reference](docs/rules.md). This plugin provides terminal inspection without additional cluster components.
 
 ## License
 

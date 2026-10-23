@@ -27,7 +27,9 @@ Suspension suppresses the upcoming execution display, but does not hide invalid 
 | `job-already-active-event` | A UID-scoped retained `JobAlreadyActive` Event. | Reports the controller observation, without assigning individual slots. |
 | `missed-schedule-event` | A UID-scoped retained `MissSchedule` Event. | Reports the Event's message and last observation, without inventing a slot count. |
 | `too-many-missed-times-event` | A UID-scoped retained `TooManyMissedTimes` Event. | Reports the warning; subsequent controller behavior remains unknown. |
-| `controller-warning-event` | Another UID-scoped Warning Event. | Reports its reason, message, and observation time. |
+| `controller-warning-event` | Another UID-scoped Warning Event. | Reports its reason, message, and observation time. An `UnexpectedJob` Event naming a retained owned manual Run says so. |
+
+A Job created with `kubectl create job --from=cronjob/NAME` is owned by the CronJob but absent from its active list, so the CronJob controller records an `UnexpectedJob` Warning before adopting it. The resulting `controller-warning-event` Finding is expected for manual triggering, and remains until the Event expires.
 
 Events can expire and retained Jobs can be removed by several mechanisms. Neither their absence nor current history settings establish an exact missed-run count, a failure streak, replacement causes, or historical suspension duration. A `SuccessfulDelete` Event does not establish replacement, even under current `Replace` policy. Unavailable reads appear separately from Findings so empty Findings never imply complete evidence or proven health. They are not Findings and do not trigger `--exit-on-findings`; use `--require-evidence` to make them exit 1.
 

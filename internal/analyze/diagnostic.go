@@ -6,6 +6,7 @@ package analyze
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/mertdotcc/kubectl-cron/internal/collect"
@@ -30,8 +31,11 @@ func Diagnose(e collect.Evidence, now time.Time, opts Options) model.Diagnostic 
 		add("successful-history-disabled", "The successful Job history limit is zero; this setting requests no retained successful Jobs.")
 	}
 	runs := Runs(e.Jobs)
-	failed, active := []model.Run{}, []model.Run{}
+	failed, active, manual := []model.Run{}, []model.Run{}, map[string]bool{}
 	for _, run := range runs {
+		if run.Origin == "manual" {
+			manual[run.Name] = true
+		}
 		if run.State == "failed" {
 			failed = append(failed, run)
 		}
@@ -87,7 +91,13 @@ func Diagnose(e collect.Evidence, now time.Time, opts Options) model.Diagnostic 
 		if event.ObservedAt.Time != nil {
 			at = event.ObservedAt.Time.Format(time.RFC3339)
 		}
-		add(rule, fmt.Sprintf("Retained CronJob Event %s: %s (last observed %s; observations %d). Event observations do not identify individual skipped slots or subsequent controller behavior.", event.Reason, event.Message, at, event.Observations))
+		// The controller records UnexpectedJob for an owned Job missing from its
+		// active list, such as one from kubectl create job --from, before adopting it.
+		note := ""
+		if i := strings.LastIndex(event.Message, ": "); event.Reason == "UnexpectedJob" && i >= 0 && manual[event.Message[i+2:]] {
+			note = " The named Job is a retained owned manual Run."
+		}
+		add(rule, fmt.Sprintf("Retained CronJob Event %s: %s (last observed %s; observations %d).%s Event observations do not identify individual skipped slots or subsequent controller behavior.", event.Reason, event.Message, at, event.Observations, note))
 	}
 	return d
 }

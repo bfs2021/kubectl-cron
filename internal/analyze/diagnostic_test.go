@@ -30,3 +30,25 @@ func TestDiagnosticsDoNotInferFailureOrReplacementFromWeakEvidence(t *testing.T)
 		t.Fatalf("controller behavior invented: %+v", d)
 	}
 }
+
+func TestUnexpectedJobEventNotesOwnedManualRuns(t *testing.T) {
+	now := time.Date(2026, 11, 5, 8, 12, 0, 0, time.UTC)
+	zone := "UTC"
+	cj := batchv1.CronJob{Spec: batchv1.CronJobSpec{Schedule: "*/10 * * * *", TimeZone: &zone}}
+	manual := batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "held", Annotations: map[string]string{"cronjob.kubernetes.io/instantiate": "manual"}}}
+	scheduled := batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "ledger-29000000", Annotations: map[string]string{batchv1.CronJobScheduledTimestampAnnotation: now.Add(-10 * time.Minute).Format(time.RFC3339)}}}
+	unexpected := func(job string, minutes int) corev1.Event {
+		return corev1.Event{Reason: "UnexpectedJob", Type: "Warning", Message: "Saw a job that the controller did not create or forgot: " + job, LastTimestamp: metav1.NewTime(now.Add(-time.Duration(minutes) * time.Minute))}
+	}
+	e := collect.Evidence{CronJob: cj, Jobs: []batchv1.Job{manual, scheduled}, Events: []corev1.Event{unexpected("held", 1), unexpected("ledger-29000000", 2), unexpected("gone", 3)}}
+	d := Diagnose(e, now, Options{})
+	if len(d.Findings) != 3 {
+		t.Fatalf("%+v", d.Findings)
+	}
+	for i, finding := range d.Findings {
+		noted := strings.Contains(finding.Message, "The named Job is a retained owned manual Run.")
+		if finding.Rule != "controller-warning-event" || noted != (i == 0) {
+			t.Fatalf("finding %d: %+v", i, finding)
+		}
+	}
+}
