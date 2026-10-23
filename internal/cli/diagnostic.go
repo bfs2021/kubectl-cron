@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/mertdotcc/kubectl-cron/internal/analyze"
 	"github.com/mertdotcc/kubectl-cron/internal/collect"
 	"github.com/mertdotcc/kubectl-cron/internal/model"
@@ -15,6 +17,9 @@ func addDiagnostics(root *cobra.Command, parent *options) {
 	cmd := &cobra.Command{Use: "diagnose [NAME]", Short: "Show Findings from configuration and retained runtime evidence", Args: cobra.MaximumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if err := o.validate(cmd, args, false); err != nil {
 			return err
+		}
+		if o.requireEvidence && len(o.filenames) > 0 {
+			return fmt.Errorf("--require-evidence uses live related resources and cannot be combined with offline --filename")
 		}
 		cjs, source, err := o.objects(cmd, args)
 		if err != nil {
@@ -38,5 +43,6 @@ func addDiagnostics(root *cobra.Command, parent *options) {
 		return o.writeReport(cmd, analyze.Diagnostics(evidence, source, o.now(), analyze.Options{AssumeTimezone: o.assumeTimezone, NoFindings: o.noFindings, Count: 1}))
 	}}
 	addCommon(cmd, o)
+	addRequireEvidence(cmd, o)
 	root.AddCommand(cmd)
 }

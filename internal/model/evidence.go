@@ -11,6 +11,26 @@ type Availability struct {
 	Message  string `json:"message,omitempty"`
 }
 
+// UnavailableEvidence lists requested related reads that did not complete.
+func (r Report) UnavailableEvidence() []Availability {
+	reads := []Availability{}
+	if r.Inspection != nil {
+		reads = append(reads, r.Inspection.Evidence...)
+	}
+	if r.Diagnostics != nil {
+		for _, row := range *r.Diagnostics {
+			reads = append(reads, row.Evidence...)
+		}
+	}
+	missing := []Availability{}
+	for _, read := range reads {
+		if read.State == "forbidden" || read.State == "unavailable" {
+			missing = append(missing, read)
+		}
+	}
+	return missing
+}
+
 type Measure struct {
 	Seconds *float64 `json:"seconds"`
 	Reason  string   `json:"reason,omitempty"`

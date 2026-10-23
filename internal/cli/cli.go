@@ -45,7 +45,7 @@ type options struct {
 	filenames                                                  []string
 	allNamespaces                                              bool
 	selector, output, color, sort, summary, assumeTimezone, tz string
-	noFindings, problems, exitOnFindings                       bool
+	noFindings, problems, exitOnFindings, requireEvidence      bool
 	count                                                      int
 	stdin                                                      io.Reader
 	now                                                        func() time.Time

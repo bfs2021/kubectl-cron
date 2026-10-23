@@ -84,3 +84,32 @@ func TestDiagnosticsOfflineAndPartialEvidence(t *testing.T) {
 		t.Fatalf("empty output implied health: %v %s %s", err, out, notes)
 	}
 }
+
+func TestRequireEvidenceFailsOnIncompleteReads(t *testing.T) {
+	for _, deny := range []string{"jobs", "events"} {
+		config := serveEvidence(t, fixtureData(), deny)
+		for _, args := range [][]string{{"diagnose", "ledger"}, {"inspect", "ledger"}} {
+			out, _, err := command("", append(args, "--kubeconfig", config, "--require-evidence", "--exit-on-findings", "-o", "json")...)
+			if cli.ExitCode(err) != 1 || !strings.Contains(err.Error(), deny+" forbidden (permission-denied)") {
+				t.Fatalf("%v with %s denied: %v", args, deny, err)
+			}
+			if !strings.Contains(out, `"state": "forbidden"`) {
+				t.Fatalf("report withheld: %s", out)
+			}
+		}
+	}
+	config := serveEvidence(t, fixtureData(), "")
+	for _, args := range [][]string{{"diagnose", "ledger"}, {"inspect", "ledger"}} {
+		if _, _, err := command("", append(args, "--kubeconfig", config, "--require-evidence")...); err != nil {
+			t.Fatalf("complete evidence rejected: %v", err)
+		}
+		if _, _, err := command("", append(args, "--kubeconfig", config, "--require-evidence", "--exit-on-findings")...); cli.ExitCode(err) != 2 {
+			t.Fatalf("Findings exit lost: %v", err)
+		}
+	}
+	t.Setenv("KUBECONFIG", "/definitely/unavailable/config")
+	out, _, err := command("", "diagnose", "-f", "../testdata/cronjobs.yaml", "--require-evidence")
+	if cli.ExitCode(err) != 1 || out != "" {
+		t.Fatalf("offline input cannot satisfy required evidence: %v %s", err, out)
+	}
+}

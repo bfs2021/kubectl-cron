@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mertdotcc/kubectl-cron/internal/analyze"
 	"github.com/mertdotcc/kubectl-cron/internal/collect"
@@ -41,8 +42,37 @@ func addInspection(root *cobra.Command, parent *options) {
 		return o.writeReport(cmd, r)
 	}}
 	addCommon(cmd, o)
+	addRequireEvidence(cmd, o)
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum retained Jobs to display, 1-1000")
 	root.AddCommand(cmd)
+}
+
+func addRequireEvidence(cmd *cobra.Command, o *options) {
+	cmd.Flags().BoolVar(&o.requireEvidence, "require-evidence", false, "Exit 1 after output when a Jobs or Events read is forbidden or unavailable")
+}
+
+// Shared namespace reads repeat per CronJob, so failures are grouped by read.
+func requiredEvidence(missing []model.Availability) error {
+	if len(missing) == 0 {
+		return nil
+	}
+	counts := map[string]int{}
+	order := []string{}
+	for _, read := range missing {
+		key := fmt.Sprintf("%s %s (%s)", read.Resource, read.State, read.Reason)
+		if counts[key] == 0 {
+			order = append(order, key)
+		}
+		counts[key]++
+	}
+	parts := make([]string, len(order))
+	for i, key := range order {
+		parts[i] = key
+		if counts[key] > 1 {
+			parts[i] = fmt.Sprintf("%s for %d CronJobs", key, counts[key])
+		}
+	}
+	return fmt.Errorf("required evidence incomplete: %s", strings.Join(parts, "; "))
 }
 
 func (o *options) clients() (typedbatch.BatchV1Interface, typedcore.CoreV1Interface, string, error) {
@@ -94,6 +124,11 @@ func (o *options) writeReport(cmd *cobra.Command, r model.Report) error {
 	}
 	if err != nil {
 		return err
+	}
+	if o.requireEvidence {
+		if err := requiredEvidence(r.UnavailableEvidence()); err != nil {
+			return err
+		}
 	}
 	if o.exitOnFindings && r.HasFindings() {
 		return ErrFindings

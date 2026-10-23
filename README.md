@@ -49,6 +49,9 @@ kubectl cron logs ledger -n finance --all --all-containers
 kubectl cron diagnose -A
 kubectl cron diagnose ledger -n finance --exit-on-findings -o json
 
+# In CI, also fail when Jobs or Events cannot be read
+kubectl cron diagnose -n finance --exit-on-findings --require-evidence -o json
+
 # Compact execution history; '?' means unknown, not proven skipped
 kubectl cron timeline ledger -n finance --since=24h
 
@@ -117,7 +120,7 @@ Scheduling delay measures Job creation minus its recorded nominal slot. Duration
 
 Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--timestamps` as needed. Multiple streams receive identity prefixes. `--max-log-requests` bounds concurrency (default 5, maximum 20); follow rejects selections exceeding that bound. Follow attaches to currently retained Pods of the selected Job and ends when those streams end; it does not wait for future Pods or Jobs. Ctrl-C cancels all reads. A missing Pod or log is reported without inventing its deletion cause. Individual lines larger than 1 MiB fail explicitly. Logs use plain text rather than the Report formats.
 
-`diagnose [NAME]` prints Findings from configuration, retained Job conditions and timings, and UID-scoped controller Events. It reads Jobs once per selected namespace and bounds related requests to four at a time. It makes no blanket health verdict or inferred failure streak. Unavailable reads and retention limits remain visible even when there are no Findings. `diagnose -f` stays offline and checks configuration only. Detailed inspection uses the same runtime rules; see the [rule reference](docs/rules.md).
+`diagnose [NAME]` prints Findings from configuration, retained Job conditions and timings, and UID-scoped controller Events. It reads Jobs once per selected namespace and bounds related requests to four at a time. It makes no blanket health verdict or inferred failure streak. Unavailable reads and retention limits remain visible even when there are no Findings. Without Jobs or Events, runtime Rules cannot run, so empty Findings and exit 0 can reflect missing permissions; `--require-evidence` on `diagnose` and `inspect` exits 1 after writing output when a requested Jobs or Events read is forbidden or unavailable. `diagnose -f` stays offline, checks configuration only, and rejects `--require-evidence`. Detailed inspection uses the same runtime rules; see the [rule reference](docs/rules.md).
 
 `timeline NAME` draws the same evidence as `runs`, oldest to newest, with one symbol per displayed entry. Spacing is entry order rather than proportional elapsed time. The legend separates complete, failed, running, terminating, pending, suspended, external-controller, and unknown states. Counts cover displayed entries only. It shares the history window and truncation rules, with a default display limit of 200; JSON/YAML retain the full history model for those entries.
 
@@ -127,7 +130,7 @@ Logs default to 100 lines per container; use `--tail=-1`, `--since`, or `--times
 
 Use `-o json` or `-o yaml` for the shared `cron.kubectl.dev/v1alpha1` [Report contract](docs/report.md). Unknown timestamps are null with a reason; timezone sources and relative-schedule reference points remain explicit. Match a Finding's stable `rule` ID, rather than its message. The [rule reference](docs/rules.md) describes the initial checks.
 
-Exit 0 means inspection completed, including when invalid configuration was reported. Exit 1 means an argument, file, API, or output error. `--exit-on-findings` enables exit 2 when Findings exist; an operational error still wins. Summary-only still evaluates Findings for this explicit exit-code check.
+Exit 0 means inspection completed, including when invalid configuration was reported. Exit 1 means an argument, file, API, or output error. `--exit-on-findings` enables exit 2 when Findings exist; an operational error still wins. `--require-evidence` makes an incomplete Jobs or Events read an operational error. Summary-only still evaluates Findings for this explicit exit-code check.
 
 ## Limits
 
