@@ -38,22 +38,23 @@ func timeline(out, notes io.Writer, h model.History, opts Options) error {
 		if _, err := fmt.Fprintln(out, "No entries in this window."); err != nil {
 			return err
 		}
-	}
-	if _, err := fmt.Fprintln(out, "\n+ complete   x failed   > running   ~ terminating   . pending   | suspended   E external   ? unknown"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprint(out, "Shown entries:"); err != nil {
-		return err
-	}
-	for _, state := range []string{"complete", "failed", "running", "terminating", "pending", "suspended", "external-controller", "unknown"} {
-		if counts[state] > 0 {
-			if _, err := fmt.Fprintf(out, " %s=%d", state, counts[state]); err != nil {
-				return err
+	} else {
+		if _, err := fmt.Fprintln(out, "\n+ complete   x failed   > running   ~ terminating   . pending   | suspended   E external   ? unknown"); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(out, "Shown entries:"); err != nil {
+			return err
+		}
+		for _, state := range []string{"complete", "failed", "running", "terminating", "pending", "suspended", "external-controller", "unknown"} {
+			if counts[state] > 0 {
+				if _, err := fmt.Fprintf(out, " %s=%d", state, counts[state]); err != nil {
+					return err
+				}
 			}
 		}
-	}
-	if _, err := fmt.Fprintln(out); err != nil {
-		return err
+		if _, err := fmt.Fprintln(out); err != nil {
+			return err
+		}
 	}
 	if err := historyNotes(notes, h); err != nil {
 		return err

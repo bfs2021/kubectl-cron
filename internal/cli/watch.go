@@ -196,12 +196,15 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 			}
 		case <-ticker.C:
 			connection := state.get()
-			if connection.LastError != "" && connection.LastError != lastNotice {
+			// A streamed tick clears the stale notice, so the same error
+			// warns again only after the connection recovered in between.
+			say, next := watchNotice(connection, lastNotice)
+			if say {
 				if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "CronJob watch reconnecting: %s\n", connection.LastError); err != nil {
 					return err
 				}
 			}
-			lastNotice = connection.LastError
+			lastNotice = next
 			if synced {
 				if err := draw(); err != nil {
 					return err
@@ -251,4 +254,16 @@ func redrawTerminal(out io.Writer) bool {
 	}
 	f, ok := out.(interface{ Fd() uintptr })
 	return ok && (isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd()))
+}
+
+// watchNotice decides the "reconnecting" stderr notice for one tick: the same
+// error prints once, and only a streamed tick in between lets it print again.
+func watchNotice(connection model.WatchState, last string) (say bool, next string) {
+	if connection.State == "streaming" {
+		return false, ""
+	}
+	if connection.LastError == "" || connection.LastError == last {
+		return false, last
+	}
+	return true, connection.LastError
 }
