@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -76,6 +77,7 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	state := &connectionState{}
 	state.set("connecting", nil)
+	var streamed atomic.Bool
 	fatal := make(chan error, 1)
 	fail := func(err error) {
 		select {
@@ -111,19 +113,22 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 			opts.AllowWatchBookmarks = true
 			stream, err := batch.CronJobs(ns).Watch(ctx, opts)
 			if err == nil {
+				streamed.Store(true)
 				state.set("streaming", nil)
+				// Keep a stream's error visible while the reflector backs off.
+				var streamErr error
 				stream = observeWatch(ctx, stream, func(event watch.Event) {
 					if event.Type == watch.Error {
-						err := apierrors.FromObject(event.Object)
-						state.set("reconnecting", err)
-						if fatalWatchError(err) {
-							fail(err)
+						streamErr = apierrors.FromObject(event.Object)
+						state.set("reconnecting", streamErr)
+						if fatalWatchError(streamErr, streamed.Load()) {
+							fail(streamErr)
 						}
 					}
-				}, func() { state.set("reconnecting", nil) })
+				}, func() { state.set("reconnecting", streamErr) })
 			} else {
 				state.set("reconnecting", err)
-				if fatalWatchError(err) {
+				if fatalWatchError(err, streamed.Load()) {
 					fail(err)
 				}
 			}
@@ -136,7 +141,7 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 			return
 		}
 		state.set("reconnecting", err)
-		if fatalWatchError(err) {
+		if fatalWatchError(err, streamed.Load()) {
 			fail(err)
 		}
 	}); err != nil {
@@ -215,8 +220,14 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 	}
 }
 
-func fatalWatchError(err error) bool {
-	return apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) || apierrors.IsBadRequest(err) || apierrors.IsInvalid(err) || apierrors.IsNotFound(err) || apierrors.IsMethodNotSupported(err)
+// Before the first stream, an access error means missing permission. Afterwards
+// it can come from an API server that is still syncing authorization after a
+// restart, so it is retried and reported like other connection errors.
+func fatalWatchError(err error, streamed bool) bool {
+	if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+		return !streamed
+	}
+	return apierrors.IsBadRequest(err) || apierrors.IsInvalid(err) || apierrors.IsNotFound(err) || apierrors.IsMethodNotSupported(err)
 }
 
 func (o *options) watchFrame(cmd *cobra.Command, r model.Report) error {

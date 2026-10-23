@@ -243,7 +243,7 @@ func TestWatchExpiredVersionRelistsAndRemovesDeletedObjects(t *testing.T) {
 }
 
 func TestWatchAccessErrorsAndOutputFailures(t *testing.T) {
-	for _, deny := range []string{"list", "watch", "event", "none"} {
+	for _, deny := range []string{"list", "watch", "none"} {
 		t.Run(deny, func(t *testing.T) {
 			cj := fixtureData().CronJob
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -259,10 +259,6 @@ func TestWatchAccessErrorsAndOutputFailures(t *testing.T) {
 					return
 				}
 				w.(http.Flusher).Flush()
-				if deny == "event" {
-					watchEvent(w, "ERROR", metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}, Status: "Failure", Reason: metav1.StatusReasonForbidden, Code: 403, Message: "watch test denial"})
-					return
-				}
 				<-r.Context().Done()
 			}))
 			t.Cleanup(server.Close)
@@ -289,6 +285,63 @@ func TestWatchAccessErrorsAndOutputFailures(t *testing.T) {
 				}
 			case <-time.After(4 * time.Second):
 				t.Fatal("watch did not stop on fatal error")
+			}
+		})
+	}
+}
+
+// An API server can deny requests while its authorizer syncs after a restart.
+func TestWatchRetriesAccessErrorsAfterStreaming(t *testing.T) {
+	denial := metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}, Status: "Failure", Reason: metav1.StatusReasonForbidden, Code: 403, Message: "authorizer not yet synced"}
+	for _, deny := range []string{"event", "rewatch"} {
+		t.Run(deny, func(t *testing.T) {
+			cj := fixtureData().CronJob
+			cj.ResourceVersion = "10"
+			restart := make(chan struct{})
+			var watches, denied atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if denied.Add(-1) >= 0 {
+					w.WriteHeader(http.StatusForbidden)
+					json.NewEncoder(w).Encode(denial)
+					return
+				}
+				if r.URL.Query().Get("watch") != "true" {
+					listResponse(w, "10", cj)
+					return
+				}
+				w.(http.Flusher).Flush()
+				if watches.Add(1) == 1 {
+					started := time.Now()
+					select {
+					case <-restart:
+					case <-r.Context().Done():
+						return
+					}
+					// A watch closed within a second is itself retried with backoff.
+					time.Sleep(time.Until(started.Add(1100 * time.Millisecond)))
+					if deny == "event" {
+						watchEvent(w, "ERROR", denial)
+					} else {
+						// Deny the re-watch and the relist that follows it.
+						denied.Store(2)
+					}
+					return
+				}
+				<-r.Context().Done()
+			}))
+			t.Cleanup(server.Close)
+			out := &snapshotWriter{frames: make(chan model.Report, 64)}
+			cancel, done := startWatch(t, kubeconfig(t, server.URL), out, "-o", "json")
+			nextSnapshot(t, out, func(r model.Report) bool { return r.Watch.State == "streaming" })
+			close(restart)
+			nextSnapshot(t, out, func(r model.Report) bool {
+				return r.Watch.State == "reconnecting" && strings.Contains(r.Watch.LastError, "authorizer not yet synced") && len(r.Rows()) == 1
+			})
+			nextSnapshot(t, out, func(r model.Report) bool { return r.Watch.State == "streaming" && len(r.Rows()) == 1 })
+			stopWatch(t, cancel, done)
+			if watches.Load() < 2 {
+				t.Fatalf("watch did not reconnect: %d", watches.Load())
 			}
 		})
 	}
