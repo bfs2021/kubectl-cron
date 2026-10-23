@@ -58,3 +58,14 @@ func TestTimelineSuspendedJobSymbolIsInsideFrame(t *testing.T) {
 		t.Fatalf("Report state changed: %v\n%s", err, out)
 	}
 }
+
+func TestEmptyTimelineStatesNoEntries(t *testing.T) {
+	f := fixtureData()
+	f.Jobs = nil
+	f.CronJob.CreationTimestamp = *timeMeta(reference)
+	config := serveEvidence(t, f, "")
+	out, _, err := command("", "timeline", "ledger", "--kubeconfig", config, "--since=1h", "--color=never")
+	if err != nil || !strings.Contains(out, "No entries in this window.") || !strings.Contains(out, "Shown entries: none\n") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+}

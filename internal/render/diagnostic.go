@@ -25,7 +25,11 @@ func diagnostics(out, notes io.Writer, rows []model.Diagnostic, opts Options) er
 		}
 		for _, source := range row.Evidence {
 			if source.State != "available" {
-				if _, err := fmt.Fprintf(notes, "%s: %s evidence %s (%s). %s\n", safe(name), safe(source.Resource), safe(source.State), safe(source.Reason), safe(source.Message)); err != nil {
+				detail := ""
+				if source.Message != "" {
+					detail = " " + safe(source.Message)
+				}
+				if _, err := fmt.Fprintf(notes, "%s: %s evidence %s (%s).%s\n", safe(name), safe(source.Resource), safe(source.State), safe(source.Reason), detail); err != nil {
 					return err
 				}
 			}

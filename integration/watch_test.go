@@ -347,6 +347,55 @@ func TestWatchRetriesAccessErrorsAfterStreaming(t *testing.T) {
 	}
 }
 
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+func (b *lockedBuffer) String() string { b.mu.Lock(); defer b.mu.Unlock(); return b.buf.String() }
+
+func TestWatchPrintsARepeatedConnectionErrorOnce(t *testing.T) {
+	cj := fixtureData().CronJob
+	var lists atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("watch") != "true" {
+			// A slow relist exposes its error-free resyncing state to display ticks.
+			if lists.Add(1) > 1 {
+				time.Sleep(600 * time.Millisecond)
+			}
+			listResponse(w, "10", cj)
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}, Status: "Failure", Reason: metav1.StatusReasonServiceUnavailable, Code: 503, Message: "storage unavailable"})
+	}))
+	t.Cleanup(server.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	defer cancel()
+	notes := &lockedBuffer{}
+	cmd := cli.New(strings.NewReader(""), io.Discard, notes, func() time.Time { return reference }, "")
+	cmd.SetArgs([]string{"--kubeconfig", kubeconfig(t, server.URL), "--watch", "--watch-interval=250ms", "-o", "json"})
+	done := make(chan error, 1)
+	go func() { done <- cmd.ExecuteContext(ctx) }()
+	for lists.Load() < 3 && ctx.Err() == nil {
+		time.Sleep(50 * time.Millisecond)
+	}
+	time.Sleep(time.Second)
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+	if n := strings.Count(notes.String(), "CronJob watch reconnecting: "); n != 1 {
+		t.Fatalf("%d notices after %d lists:\n%s", n, lists.Load(), notes.String())
+	}
+}
+
 func TestWatchPipedFormatsAndFindingExit(t *testing.T) {
 	cj := fixtureData().CronJob
 	cj.Spec.Schedule = "invalid"

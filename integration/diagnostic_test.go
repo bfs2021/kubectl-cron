@@ -74,12 +74,16 @@ func TestDiagnosticsOfflineAndPartialEvidence(t *testing.T) {
 	if err != nil || !strings.Contains(out, "offline-source") || !strings.Contains(out, "source: file") {
 		t.Fatalf("offline diagnosis failed: %v\n%s", err, out)
 	}
+	_, notes, err := command("", "diagnose", "-f", "../testdata/cronjobs.yaml")
+	if err != nil || !strings.Contains(notes, "evidence not-requested (offline-source).\n") || strings.Contains(notes, " \n") {
+		t.Fatalf("offline notes: %v %q", err, notes)
+	}
 	config := serveEvidence(t, fixtureData(), "jobs")
 	out, _, err = command("", "diagnose", "ledger", "--kubeconfig", config, "--no-findings", "-o", "json")
 	if err != nil || strings.Contains(out, `"findings"`) || !strings.Contains(out, `"state": "forbidden"`) {
 		t.Fatalf("partial evidence hidden: %v\n%s", err, out)
 	}
-	out, notes, err := command("", "diagnose", "ledger", "--kubeconfig", config, "--no-findings")
+	out, notes, err = command("", "diagnose", "ledger", "--kubeconfig", config, "--no-findings")
 	if err != nil || out != "" || !strings.Contains(notes, "permission-denied") || !strings.Contains(notes, "remains unknown") {
 		t.Fatalf("empty output implied health: %v %s %s", err, out, notes)
 	}

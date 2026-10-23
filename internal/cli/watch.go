@@ -36,17 +36,27 @@ func (*cronListWatch) IsWatchListSemanticsUnSupported() bool { return true }
 type connectionState struct {
 	mu    sync.Mutex
 	value model.WatchState
+	// Counts streaming connections, including any between display ticks.
+	streams int
 }
 
 func (s *connectionState) set(state string, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.value = model.WatchState{Mode: "api", State: state}
+	if state == "streaming" {
+		s.streams++
+	}
 	if err != nil {
 		s.value.LastError = err.Error()
 	}
 }
 func (s *connectionState) get() model.WatchState { s.mu.Lock(); defer s.mu.Unlock(); return s.value }
+func (s *connectionState) snapshot() (model.WatchState, int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.value, s.streams
+}
 
 func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 	if len(o.filenames) > 0 {
@@ -159,7 +169,9 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 	ticker := time.NewTicker(o.watchInterval)
 	defer ticker.Stop()
 	synced := false
-	lastNotice := ""
+	// Reconnect cycles clear the error between attempts, so a notice repeats
+	// only for a different error or after the watch has streamed again.
+	lastNotice, noticeStreams := "", 0
 	draw := func() error {
 		cjs := []batchv1.CronJob{}
 		for _, obj := range informer.GetStore().List() {
@@ -204,13 +216,16 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		case <-ticker.C:
-			connection := state.get()
+			connection, streams := state.snapshot()
+			if streams != noticeStreams {
+				lastNotice, noticeStreams = "", streams
+			}
 			if connection.LastError != "" && connection.LastError != lastNotice {
 				if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "CronJob watch reconnecting: %s\n", connection.LastError); err != nil {
 					return err
 				}
+				lastNotice = connection.LastError
 			}
-			lastNotice = connection.LastError
 			if synced {
 				if err := draw(); err != nil {
 					return err

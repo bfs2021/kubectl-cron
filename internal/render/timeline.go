@@ -57,6 +57,11 @@ func timeline(out, notes io.Writer, h model.History, opts Options) error {
 			}
 		}
 	}
+	if len(h.Entries) == 0 {
+		if _, err := fmt.Fprint(out, " none"); err != nil {
+			return err
+		}
+	}
 	if _, err := fmt.Fprintln(out); err != nil {
 		return err
 	}

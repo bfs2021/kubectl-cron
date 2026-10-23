@@ -59,7 +59,11 @@ func Calendar(cjs []batchv1.CronJob, source string, now time.Time, next time.Dur
 		}
 	}
 	if shared > 0 && !opts.NoFindings {
-		c.Findings = []model.Finding{{Rule: "coincident-schedules", Message: fmt.Sprintf("%d displayed nominal times are shared by selected CronJobs; largest group is %d at %s. This describes scheduling intent; actual simultaneous execution is unverified.", shared, peak, peakAt.Format(time.RFC3339))}}
+		times := "times are"
+		if shared == 1 {
+			times = "time is"
+		}
+		c.Findings = []model.Finding{{Rule: "coincident-schedules", Message: fmt.Sprintf("%d displayed nominal %s shared by selected CronJobs; largest group is %d at %s. This describes scheduling intent; actual simultaneous execution is unverified.", shared, times, peak, peakAt.Format(time.RFC3339))}}
 	}
 	return model.Report{APIVersion: model.APIVersion, Kind: "CronJobCalendar", GeneratedAt: now.UTC(), Source: source, Calendar: &c}
 }
