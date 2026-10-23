@@ -169,34 +169,59 @@ func TestWatchExpiredVersionRelistsAndRemovesDeletedObjects(t *testing.T) {
 	ghost := *cj.DeepCopy()
 	ghost.Name = "removed"
 	expire := make(chan struct{})
-	var lists, watches atomic.Int32
+	var lists, watches, exact atomic.Int32
+	expired := func() bool {
+		select {
+		case <-expire:
+			return true
+		default:
+			return false
+		}
+	}
+	// Like an API server after a restart: a list with both limit and a specific
+	// RV is an Exact read that returns that stale RV, while an unpaginated list
+	// is served at least as fresh as the requested RV.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Query().Get("watch") != "true" {
-			if lists.Add(1) == 1 {
-				listResponse(w, "10", cj, ghost)
-			} else {
-				current := *cj.DeepCopy()
-				yes := true
-				current.Spec.Suspend = &yes
-				current.ResourceVersion = "20"
-				listResponse(w, "20", current)
+		q := r.URL.Query()
+		rv := q.Get("resourceVersion")
+		if q.Get("watch") != "true" {
+			lists.Add(1)
+			if q.Get("limit") != "" && rv != "" && rv != "0" {
+				exact.Add(1)
 			}
+			if !expired() {
+				// A paginated initial list makes the reflector keep paging later relists.
+				if q.Get("continue") == "" {
+					json.NewEncoder(w).Encode(batchv1.CronJobList{TypeMeta: metav1.TypeMeta{APIVersion: "batch/v1", Kind: "CronJobList"}, ListMeta: metav1.ListMeta{ResourceVersion: "10", Continue: "page-2"}, Items: []batchv1.CronJob{cj}})
+				} else {
+					listResponse(w, "10", ghost)
+				}
+				return
+			}
+			if q.Get("limit") != "" && rv == "10" {
+				listResponse(w, "10", cj, ghost)
+				return
+			}
+			current := *cj.DeepCopy()
+			yes := true
+			current.Spec.Suspend = &yes
+			current.ResourceVersion = "20"
+			listResponse(w, "20", current)
 			return
 		}
-		n := watches.Add(1)
-		rv := r.URL.Query().Get("resourceVersion")
-		if (n == 1 && rv != "10") || (n > 1 && rv != "20") {
-			t.Errorf("incorrect resumed RV %q", rv)
-		}
+		watches.Add(1)
 		w.(http.Flusher).Flush()
-		if n == 1 {
+		if rv == "10" {
 			select {
 			case <-expire:
 				watchEvent(w, "ERROR", metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}, Status: "Failure", Reason: metav1.StatusReasonExpired, Code: 410, Message: "expired test version"})
 			case <-r.Context().Done():
 			}
 			return
+		}
+		if rv != "20" {
+			t.Errorf("incorrect resumed RV %q", rv)
 		}
 		<-r.Context().Done()
 	}))
@@ -211,6 +236,9 @@ func TestWatchExpiredVersionRelistsAndRemovesDeletedObjects(t *testing.T) {
 	stopWatch(t, cancel, done)
 	if lists.Load() < 2 || watches.Load() < 2 {
 		t.Fatalf("expired version did not relist: %d/%d", lists.Load(), watches.Load())
+	}
+	if exact.Load() != 0 {
+		t.Fatalf("relist paginated a specific RV, forcing %d Exact reads", exact.Load())
 	}
 }
 

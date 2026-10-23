@@ -93,11 +93,15 @@ func (o *options) runWatch(cmd *cobra.Command, args []string) error {
 		ListWithContextFunc: func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 			state.set("resyncing", nil)
 			opts = query(opts)
-			if opts.ResourceVersion == "0" {
+			switch opts.ResourceVersion {
+			case "0":
 				opts.ResourceVersion = ""
-			}
-			if opts.Limit == 0 {
-				opts.Limit = 500
+			case "":
+			default:
+				// A paginated list at a specific RV is an Exact read. After an
+				// expired watch it returns the same stale RV, so the relist never
+				// advances; unpaginated, it is at least as fresh as that RV.
+				opts.Limit = 0
 			}
 			return batch.CronJobs(ns).List(ctx, opts)
 		},
