@@ -39,7 +39,7 @@ func timeline(out, notes io.Writer, h model.History, opts Options) error {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintln(out, "\n+ complete   x failed   > running   ~ terminating   . pending   | suspended   E external   ? unknown"); err != nil {
+	if _, err := fmt.Fprintln(out, "\n+ complete   x failed   > running   ~ terminating   . pending   s suspended Job   E external   ? unknown"); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprint(out, "Shown entries:"); err != nil {
@@ -47,7 +47,12 @@ func timeline(out, notes io.Writer, h model.History, opts Options) error {
 	}
 	for _, state := range []string{"complete", "failed", "running", "terminating", "pending", "suspended", "external-controller", "unknown"} {
 		if counts[state] > 0 {
-			if _, err := fmt.Fprintf(out, " %s=%d", state, counts[state]); err != nil {
+			label := state
+			if state == "suspended" {
+				// The Job, not its CronJob, is suspended.
+				label = "suspended-job"
+			}
+			if _, err := fmt.Fprintf(out, " %s=%d", label, counts[state]); err != nil {
 				return err
 			}
 		}
@@ -80,7 +85,7 @@ func stateSymbol(state string) byte {
 	case "pending":
 		return '.'
 	case "suspended":
-		return '|'
+		return 's'
 	case "external-controller":
 		return 'E'
 	default:
